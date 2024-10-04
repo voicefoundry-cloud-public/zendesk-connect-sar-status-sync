@@ -19,6 +19,11 @@ Parameters:
     Description: Zendesk URL (https://<your-name>.zendesk.com).The Zendesk instance needs to be created as a pre-requisite for this installation.
     AllowedPattern: "https://[a-zA-Z0-9-.]+.zendesk.com$"
     ConstraintDescription: "Endpoint must be a valid Zendesk Host URL. For example, https://eziwidget.zendesk.com"
+  AppInstallationId:
+    Type: String
+    Description:  Amazon Connect app for Zendesk installation ID. Can be found in the Zendesk agent status mapping screen of the app.
+    AllowedPattern: "^[0-9]+$"
+    ConstraintDescription: "Installation ID must be a number"
   ConnectInstanceId:
     Type: String
     Description: Connect instance ID.
@@ -36,7 +41,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
     HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
-    SemanticVersion: 1.0.5
+    SemanticVersion: 1.0.13
 
 Resources:
 
@@ -181,11 +186,36 @@ Resources:
               ApiKeyRequired: true
               OverrideApiAuth: true
 
-Outputs:
-  ApiKeyOutput:
-    Description: "API Key for accessing the API"
-    Value: !Ref StatusSyncApi.UsagePlanKey
+  functionUpdateInstallation:
+    Type: AWS::Serverless::Function
+    DependsOn: [StatusSyncApi]
+    Properties:
+      FunctionName: !Sub "zd-update-installation-${TargetEnvironment}"
+      Description: "Triggered as a custom resource of deployment stack, it updates Zendesk instance installation settings"
+      Runtime: nodejs20.x
+      Handler: index.handler
+      CodeUri: zd-update-installation/
+      Timeout: 30
+      Policies: 
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - apigateway:GET
+              Resource: 
+                - !Sub arn:aws:apigateway:${AWS::Region}::/apikeys/${StatusSyncApi.ApiKey}
+      Environment:
+        Variables:
+          ZD_EMAIL: !Ref ZendeskEmailID
+          ZD_TOKEN: !Ref ZendeskToken 
+          ZD_URL: !Ref ZendeskURL
+          ZD_INSTALLATION_ID: !Ref AppInstallationId
+          STATUS_SYNC_API_URL: !Sub "https://${StatusSyncApi}.execute-api.${AWS::Region}.amazonaws.com/${TargetEnvironment}/"
+          STATUS_SYNC_API_KEY: !Ref StatusSyncApi.ApiKey
 
-  ApiUrlOutput:
-    Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${StatusSyncApi}.execute-api.${AWS::Region}.amazonaws.com/${TargetEnvironment}/"
+  LambdaCustomResource:
+      Type: Custom::LambdaCustomResource
+      Properties:
+        ServiceToken: !GetAtt functionUpdateInstallation.Arn
+        ServiceTimeout: 90
