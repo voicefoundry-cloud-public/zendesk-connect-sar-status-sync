@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+######################### Parameters ##########################
+Parameters:
+  TargetEnvironment:
+    Description: Name of your target environment (dev, UAT, prod, ...)
+    Type: String
+    Default: prod
+  ZendeskEmailID:
+    Type: String
+    Description:  Verified email address of a Zendesk admin for the selected Zendesk Instance
+  ZendeskToken:
+    Type: String
+    Description: Zendesk Token for API access. This needs to be generated as a pre-requisite for this installation.
+    NoEcho: true
+  ZendeskURL:
+    Type: String
+    Description: Zendesk URL (https://<your-name>.zendesk.com).The Zendesk instance needs to be created as a pre-requisite for this installation.
+    AllowedPattern: "https://[a-zA-Z0-9-.]+.zendesk.com$"
+    ConstraintDescription: "Endpoint must be a valid Zendesk Host URL. For example, https://eziwidget.zendesk.com"
+  ConnectInstanceId:
+    Type: String
+    Description: Connect instance ID.
+    AllowedPattern: "^[0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12}$"
+    ConstraintDescription: "instance ID must be a valid UUID."
+  
+######################### Metadata ############################
+Metadata:
+  'AWS::ServerlessRepo::Application':
+    Name: Agent-Status-Sync-for-Zendesk
+    Description: Enables syncing of Zendesk unified agent status with Amazon Connect's Agent status based on mapping configuration. To be used with the Amazon Connect app for Zendesk.
+    Author: TTEC Digital - AWS Practice
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['Connect','Agent-status', 'Zendesk']
+    HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
+    SemanticVersion: 1.0.5
+
+Resources:
+
+  ######################### DynamoDB ##########################
+  tableAgentAssociations:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub "zdConnectApp-agents-${TargetEnvironment}"
+      PrimaryKey:
+        Name: zendeskAgentId
+        Type: String
+  
+  tableStatusMappings:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub "zdConnectApp-mappings-${TargetEnvironment}"
+      PrimaryKey:
+        Name: zendeskStatusId
+        Type: String
+
+
+  ######################### API Gateway ##########################
+  StatusSyncApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref TargetEnvironment
+      EndpointConfiguration:
+        Type: REGIONAL
+      Auth:
+        ApiKeyRequired: true # sets for all methods
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Throttle:
+            BurstLimit: 500
+            RateLimit: 200
+
+  ######################### Lambda ##########################
+  functionUpdateAgentAssociation:
+    Type: AWS::Serverless::Function
+    DependsOn: tableAgentAssociations
+    Properties:
+      FunctionName: !Sub "zd-post-agent-association-${TargetEnvironment}"
+      Description: "Triggered on linked API endpoint, it stores association between Zendesk agent ID and related Connect agent ID"
+      Runtime: nodejs20.x
+      Handler: index.handler
+      CodeUri: zd-post-agent-association/
+      Timeout: 30
+      Policies: 
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt tableAgentAssociations.Arn
+      Environment:
+        Variables:
+          AGENT_ASSOCIATIONS_TABLE: !Ref tableAgentAssociations
+
+      Events:
+        StatusSync:
+          Type: Api
+          Properties:
+            RestApiId: !Ref StatusSyncApi
+            Path: /agents/
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+              OverrideApiAuth: true
+
+  functionUpdateStatusMapping:
+    Type: AWS::Serverless::Function
+    DependsOn: tableStatusMappings
+    Properties:
+      FunctionName: !Sub "zd-post-status-mapping-${TargetEnvironment}"
+      Description: "Triggered on linked API endpoint, it stores mapping between Zendesk agent status ID and configured Connect agent status ID"
+      Runtime: nodejs20.x
+      Handler: index.handler
+      CodeUri: zd-post-status-mapping/
+      Timeout: 30
+      Policies: 
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource: !GetAtt tableStatusMappings.Arn
+      Environment:
+        Variables:
+          STATUS_MAPPING_TABLE: !Ref tableStatusMappings
+
+      Events:
+        StatusSync:
+          Type: Api
+          Properties:
+            RestApiId: !Ref StatusSyncApi
+            Path: /mappings/
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+              OverrideApiAuth: true
+
+  functionSetConnectStatus:
+    Type: AWS::Serverless::Function
+    DependsOn: [tableAgentAssociations, tableStatusMappings]
+    Properties:
+      FunctionName: !Sub "zd-webhook-set-status-${TargetEnvironment}"
+      Description: "Triggered on linked API endpoint, it switches Connect agent status, based on changed Zendesk agent status"
+      Runtime: nodejs20.x
+      Handler: index.handler
+      CodeUri: zd-webhook-set-status/
+      Timeout: 900
+      Policies: 
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - connect:PutUserStatus
+              Resource: 
+                - !GetAtt tableAgentAssociations.Arn
+                - !GetAtt tableStatusMappings.Arn
+                - !Sub arn:aws:connect:${AWS::Region}:${AWS::AccountId}:instance/${ConnectInstanceId}/agent/*
+                - !Sub arn:aws:connect:${AWS::Region}:${AWS::AccountId}:instance/${ConnectInstanceId}/agent-status/*
+      Environment:
+        Variables:
+          AGENT_ASSOCIATIONS_TABLE: !Ref tableStatusMappings
+          STATUS_MAPPING_TABLE: !Ref tableStatusMappings
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
+
+      Events:
+        StatusSync:
+          Type: Api
+          Properties:
+            RestApiId: !Ref StatusSyncApi
+            Path: /status/
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+              OverrideApiAuth: true
+
+Outputs:
+  ApiKeyOutput:
+    Description: "API Key for accessing the API"
+    Value: !Ref StatusSyncApi.UsagePlanKey
+
+  ApiUrlOutput:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${StatusSyncApi}.execute-api.${AWS::Region}.amazonaws.com/${TargetEnvironment}/"
