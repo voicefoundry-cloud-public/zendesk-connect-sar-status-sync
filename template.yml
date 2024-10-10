@@ -168,10 +168,10 @@ Resources:
                 - !GetAtt tableAgentAssociations.Arn
                 - !GetAtt tableStatusMappings.Arn
                 - !Sub arn:aws:connect:${AWS::Region}:${AWS::AccountId}:instance/${ConnectInstanceId}/agent/*
-                - !Sub arn:aws:connect:${AWS::Region}:${AWS::AccountId}:instance/${ConnectInstanceId}/agent-status/*
+                - !Sub arn:aws:connect:${AWS::Region}:${AWS::AccountId}:instance/${ConnectInstanceId}/agent-state/*
       Environment:
         Variables:
-          AGENT_ASSOCIATIONS_TABLE: !Ref tableStatusMappings
+          AGENT_ASSOCIATIONS_TABLE: !Ref tableAgentAssociations
           STATUS_MAPPING_TABLE: !Ref tableStatusMappings
           CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
 
