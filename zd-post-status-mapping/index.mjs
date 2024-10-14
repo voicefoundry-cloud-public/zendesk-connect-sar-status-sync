@@ -1,8 +1,17 @@
 console.log('Loading function');
 
 import { addMapping, deleteMapping } from './dynamoDB.mjs';
+import { validateSourceIP } from './validateSourceIP.mjs';
 
 export const handler = async (event) => {
+  const isValidSourceIP = await validateSourceIP(event.requestContext.identity.sourceIp);
+  if (!isValidSourceIP) {
+    return {
+      statusCode: 401,
+      body: "Access denied",
+    }
+  }
+
   const mappings = JSON.parse(event.body);
   console.log("mappings: ", mappings);
   let success = true;

@@ -1,7 +1,7 @@
 console.log("Loading function");
 
 import response from "./cfn-response.mjs";
-import { init, updateInstallation } from "./zdApi.mjs";
+import { init } from "./zdApi.mjs";
 import { getApiKeyValue } from "./apiGateway.mjs";
 
 export const handler = async (event, context) => {
@@ -20,7 +20,7 @@ export const handler = async (event, context) => {
         installed = "installed";
     }
 
-    const axiosClient = init();
+    const axiosClient = init("api/v2/apps/installations");
     if (axiosClient) {
         await updateInstallation(axiosClient, {
             key: "gwAPIKeyDev",
@@ -40,3 +40,17 @@ export const handler = async (event, context) => {
         console.error("Error sending cfn response: ", error);
     });
 };
+
+const updateInstallation = async (webClient, setting) => {
+    return webClient.put(`/${process.env.ZD_INSTALLATION_ID}`, {
+        settings: { [setting.key]: setting.value },
+    }).catch((err) => {
+        const message = `
+        error updating installation setting 
+        ${setting}
+    `;
+        console.error(message, err);
+        return null;
+    });
+};
+
