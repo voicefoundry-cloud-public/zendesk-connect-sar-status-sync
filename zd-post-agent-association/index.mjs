@@ -1,8 +1,17 @@
 console.log('Loading function');
 
-import { addAssociation }  from './dynamoDB.mjs';
+import { addAssociation } from './dynamoDB.mjs';
+import { validateSourceIP } from './validateSourceIP.mjs';
 
 export const handler = async (event) => {
+  const isValidSourceIP = await validateSourceIP(event.requestContext.identity.sourceIp);
+  if (!isValidSourceIP) {
+    return {
+      statusCode: 401,
+      body: "Access denied",
+    }
+  }
+  
   const association = JSON.parse(event.body);
   console.log("association: ", association);
   const { zendeskAgent, connectAgent } = association;

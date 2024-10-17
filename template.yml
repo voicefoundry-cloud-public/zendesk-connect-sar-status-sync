@@ -41,7 +41,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
     HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
-    SemanticVersion: 1.0.13
+    SemanticVersion: 1.0.17
 
 Resources:
 
@@ -60,6 +60,14 @@ Resources:
       TableName: !Sub "zdConnectApp-mappings-${TargetEnvironment}"
       PrimaryKey:
         Name: zendeskStatusId
+        Type: String
+
+  tableProxyIPs:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub "zdConnectApp-proxyIPs-${TargetEnvironment}"
+      PrimaryKey:
+        Name: id
         Type: String
 
 
@@ -81,7 +89,7 @@ Resources:
   ######################### Lambda ##########################
   functionUpdateAgentAssociation:
     Type: AWS::Serverless::Function
-    DependsOn: tableAgentAssociations
+    DependsOn: [tableAgentAssociations, tableProxyIPs]
     Properties:
       FunctionName: !Sub "zd-post-agent-association-${TargetEnvironment}"
       Description: "Triggered on linked API endpoint, it stores association between Zendesk agent ID and related Connect agent ID"
@@ -96,10 +104,17 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
-              Resource: !GetAtt tableAgentAssociations.Arn
+                - dynamodb:GetItem
+              Resource: 
+                - !GetAtt tableAgentAssociations.Arn
+                - !GetAtt tableProxyIPs.Arn
       Environment:
         Variables:
           AGENT_ASSOCIATIONS_TABLE: !Ref tableAgentAssociations
+          PROXY_IPS_TABLE: !Ref tableProxyIPs
+          ZD_EMAIL: !Ref ZendeskEmailID
+          ZD_TOKEN: !Ref ZendeskToken 
+          ZD_URL: !Ref ZendeskURL
 
       Events:
         StatusSync:
@@ -114,7 +129,7 @@ Resources:
 
   functionUpdateStatusMapping:
     Type: AWS::Serverless::Function
-    DependsOn: tableStatusMappings
+    DependsOn: [tableStatusMappings, tableProxyIPs]
     Properties:
       FunctionName: !Sub "zd-post-status-mapping-${TargetEnvironment}"
       Description: "Triggered on linked API endpoint, it stores mapping between Zendesk agent status ID and configured Connect agent status ID"
@@ -128,12 +143,19 @@ Resources:
           Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
                 - dynamodb:PutItem
                 - dynamodb:DeleteItem
-              Resource: !GetAtt tableStatusMappings.Arn
+              Resource: 
+                - !GetAtt tableStatusMappings.Arn
+                - !GetAtt tableProxyIPs.Arn
       Environment:
         Variables:
           STATUS_MAPPING_TABLE: !Ref tableStatusMappings
+          PROXY_IPS_TABLE: !Ref tableProxyIPs
+          ZD_EMAIL: !Ref ZendeskEmailID
+          ZD_TOKEN: !Ref ZendeskToken 
+          ZD_URL: !Ref ZendeskURL
 
       Events:
         StatusSync:
