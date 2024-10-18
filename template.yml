@@ -41,7 +41,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
     HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
-    SemanticVersion: 1.0.18
+    SemanticVersion: 1.0.19
 
 Resources:
 
@@ -66,6 +66,14 @@ Resources:
     Type: AWS::Serverless::SimpleTable
     Properties:
       TableName: !Sub "zdConnectApp-proxyIPs-${TargetEnvironment}"
+      PrimaryKey:
+        Name: id
+        Type: String
+
+  tableWebhookId:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub "zdConnectApp-webhookId-${TargetEnvironment}"
       PrimaryKey:
         Name: id
         Type: String
@@ -210,7 +218,7 @@ Resources:
 
   functionUpdateInstallation:
     Type: AWS::Serverless::Function
-    DependsOn: [StatusSyncApi]
+    DependsOn: [tableWebhookId, StatusSyncApi]
     Properties:
       FunctionName: !Sub "zd-update-installation-${TargetEnvironment}"
       Description: "Triggered as a custom resource of deployment stack, it updates Zendesk instance installation settings"
@@ -225,7 +233,11 @@ Resources:
             - Effect: Allow
               Action:
                 - apigateway:GET
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
               Resource: 
+                - !GetAtt tableWebhookId.Arn
                 - !Sub arn:aws:apigateway:${AWS::Region}::/apikeys/${StatusSyncApi.ApiKey}
       Environment:
         Variables:
@@ -235,6 +247,7 @@ Resources:
           ZD_INSTALLATION_ID: !Ref AppInstallationId
           STATUS_SYNC_API_URL: !Sub "https://${StatusSyncApi}.execute-api.${AWS::Region}.amazonaws.com/${TargetEnvironment}/"
           STATUS_SYNC_API_KEY: !Ref StatusSyncApi.ApiKey
+          WEBHOOK_ID_TABLE: !Ref tableWebhookId
 
   LambdaCustomResource:
       Type: Custom::LambdaCustomResource
