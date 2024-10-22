@@ -7,12 +7,12 @@ import url from "url";
 const SUCCESS = "SUCCESS";
 const FAILED = "FAILED";
 
-const send = function (event, context, responseStatus, responseData, physicalResourceId, noEcho) {
+const send = function (event, context, responseStatus, message, responseData, physicalResourceId, noEcho) {
 
   return new Promise((resolve, reject) => {
     const responseBody = JSON.stringify({
       Status: responseStatus,
-      Reason: "See the details in CloudWatch Log Stream: " + context.logStreamName,
+      Reason: `${message} See the details in CloudWatch Log Stream: ${context.logStreamName}`,
       PhysicalResourceId: physicalResourceId || context.logStreamName,
       StackId: event.StackId,
       RequestId: event.RequestId,

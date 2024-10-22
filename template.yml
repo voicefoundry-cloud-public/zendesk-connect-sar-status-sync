@@ -41,7 +41,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
     HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
-    SemanticVersion: 1.0.19
+    SemanticVersion: 1.0.20
 
 Resources:
 
