@@ -5,6 +5,7 @@ import { getFromZD, init } from "./zdApi.mjs";
 import { getApiKeyValue } from "./apiGateway.mjs";
 import { getWebhookId, saveWebhookId } from "./dynamoDB.mjs";
 import { createWebhook, updateWebhook, patchWebhook, removeWebhook } from "./webhook.mjs";
+import { listInstances } from "./connect.mjs";
 
 const cfnError = (error) => {
     console.error("Error sending cfn response: ", error);
@@ -68,7 +69,7 @@ const handleWithErrors = async (request) => {
         return "Unexpected deployment error.";
     }
 
-    const { app_id } = response.data;
+    const { app_id, settings } = response.data;
     response = await getFromZD(axiosClient, `apps/${app_id}`, "app");
     if (!response) {
         return "Error accessing Zendesk instance.";
@@ -86,7 +87,16 @@ const handleWithErrors = async (request) => {
         return "This add-on requires Connect app version 3.1 or higher.";
     }
 
-    let errorMessage = "App installation settings could not be updated";
+    response = await listInstances();
+    if (!response) return "Could not obtain Connect instance list.";
+    const connectInstances = response.InstanceSummaryList || [];
+    const foundInstance = connectInstances.find((instance) => instance.Id === process.env.CONNECT_INSTANCE_ID);
+    if (!foundInstance) return "Invalid Connect instance ID."
+    if (foundInstance.InstanceAccessUrl !== settings.connectInstanceUrl) {
+        return "Specified Connect instance ID is not associated with the specified Zendesk URL."
+    }
+    
+    let errorMessage = "App installation settings could not be updated.";
     response = await updateInstallation(axiosClient, {
         key: "z2cStatusApiKey",
         value: apiKeyValue,
