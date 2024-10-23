@@ -34,14 +34,14 @@ Parameters:
 Metadata:
   'AWS::ServerlessRepo::Application':
     Name: Agent-Status-Sync-for-Zendesk
-    Description: Enables syncing of Zendesk unified agent status with Amazon Connect's Agent status based on mapping configuration. To be used with the Amazon Connect app for Zendesk.
+    Description: Enables syncing of Zendesk unified agent status with Amazon Connect's Agent status based on mapping configuration. To be used with the Amazon Connect app for Zendesk version 3.1 or later.
     Author: TTEC Digital - AWS Practice
     SpdxLicenseId: Apache-2.0
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
-    HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
-    SemanticVersion: 1.0.21
+    HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/enabling-agent-status-sync
+    SemanticVersion: 1.1.0
 
 Resources:
 

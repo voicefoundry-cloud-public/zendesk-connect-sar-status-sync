@@ -134,7 +134,7 @@ const handleWithErrors = async (request) => {
             request_format: "json",
             status: "active",
             subscriptions: [
-                "zen:event-type:agent.state_changed"
+                "zen:event-type:agent.unified_state_changed"
             ]
         };
         if (request === "Create") {
