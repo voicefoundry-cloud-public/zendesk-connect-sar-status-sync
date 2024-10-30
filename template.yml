@@ -34,14 +34,14 @@ Parameters:
 Metadata:
   'AWS::ServerlessRepo::Application':
     Name: Agent-Status-Sync-for-Zendesk
-    Description: Enables syncing of Zendesk unified agent status with Amazon Connect's Agent status based on mapping configuration. To be used with the Amazon Connect app for Zendesk.
+    Description: Enables syncing of Zendesk unified agent status with Amazon Connect's Agent status based on mapping configuration. To be used with the Amazon Connect app for Zendesk version 3.1 or later.
     Author: TTEC Digital - AWS Practice
     SpdxLicenseId: Apache-2.0
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
-    HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/add-on-features
-    SemanticVersion: 1.0.19
+    HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/enabling-agent-status-sync
+    SemanticVersion: 1.1.0
 
 Resources:
 
@@ -239,6 +239,11 @@ Resources:
               Resource: 
                 - !GetAtt tableWebhookId.Arn
                 - !Sub arn:aws:apigateway:${AWS::Region}::/apikeys/${StatusSyncApi.ApiKey}
+            - Effect: Allow
+              Action:
+                - connect:ListInstances
+                - ds:DescribeDirectories
+              Resource: "*"
       Environment:
         Variables:
           ZD_EMAIL: !Ref ZendeskEmailID
@@ -248,6 +253,7 @@ Resources:
           STATUS_SYNC_API_URL: !Sub "https://${StatusSyncApi}.execute-api.${AWS::Region}.amazonaws.com/${TargetEnvironment}/"
           STATUS_SYNC_API_KEY: !Ref StatusSyncApi.ApiKey
           WEBHOOK_ID_TABLE: !Ref tableWebhookId
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
 
   LambdaCustomResource:
       Type: Custom::LambdaCustomResource
