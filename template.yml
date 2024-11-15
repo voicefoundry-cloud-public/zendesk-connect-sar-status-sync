@@ -41,9 +41,18 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
     HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/enabling-agent-status-sync
-    SemanticVersion: 1.1.0
+    SemanticVersion: 1.1.5
+    SourceCodeUrl: https://github.com/voicefoundry-cloud-public/zendesk-connect-sar-status-sync
 
 Resources:
+
+  ######################### Zendesk token #######################
+  ZendeskTokenSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: zc-API-Token-status-sync
+      SecretString: !Ref ZendeskToken
+
 
   ######################### DynamoDB ##########################
   tableAgentAssociations:
@@ -116,12 +125,15 @@ Resources:
               Resource: 
                 - !GetAtt tableAgentAssociations.Arn
                 - !GetAtt tableProxyIPs.Arn
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref ZendeskTokenSecret
       Environment:
         Variables:
           AGENT_ASSOCIATIONS_TABLE: !Ref tableAgentAssociations
           PROXY_IPS_TABLE: !Ref tableProxyIPs
           ZD_EMAIL: !Ref ZendeskEmailID
-          ZD_TOKEN: !Ref ZendeskToken 
+          ZD_TOKEN_ID: zc-API-Token-status-sync
           ZD_URL: !Ref ZendeskURL
 
       Events:
@@ -157,12 +169,15 @@ Resources:
               Resource: 
                 - !GetAtt tableStatusMappings.Arn
                 - !GetAtt tableProxyIPs.Arn
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref ZendeskTokenSecret
       Environment:
         Variables:
           STATUS_MAPPING_TABLE: !Ref tableStatusMappings
           PROXY_IPS_TABLE: !Ref tableProxyIPs
           ZD_EMAIL: !Ref ZendeskEmailID
-          ZD_TOKEN: !Ref ZendeskToken 
+          ZD_TOKEN_ID: zc-API-Token-status-sync
           ZD_URL: !Ref ZendeskURL
 
       Events:
@@ -244,10 +259,13 @@ Resources:
                 - connect:ListInstances
                 - ds:DescribeDirectories
               Resource: "*"
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref ZendeskTokenSecret
       Environment:
         Variables:
           ZD_EMAIL: !Ref ZendeskEmailID
-          ZD_TOKEN: !Ref ZendeskToken 
+          ZD_TOKEN_ID: zc-API-Token-status-sync
           ZD_URL: !Ref ZendeskURL
           ZD_INSTALLATION_ID: !Ref AppInstallationId
           STATUS_SYNC_API_URL: !Sub "https://${StatusSyncApi}.execute-api.${AWS::Region}.amazonaws.com/${TargetEnvironment}/"
