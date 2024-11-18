@@ -30,9 +30,6 @@ export const handler = async (event, context) => {
 };
 
 const handleWithErrors = async (request) => {
-    //TODO: add Connect instance id validation in the future using 
-    // https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/connect/command/ListInstancesCommand/
-    // and cross-checking returned access url with connectInstanceUrl in Zendesk instance settings
 
     let apiKeyValue = "";
     let apiSubdomain = "";
@@ -53,7 +50,7 @@ const handleWithErrors = async (request) => {
         webhookId = await getWebhookId();
     }
 
-    const axiosClient = init("api/v2/");
+    const axiosClient = await init("api/v2/");
     if (!axiosClient) return "Error initializing Axios client.";
 
     response = await getFromZD(axiosClient, `apps/installations/${process.env.ZD_INSTALLATION_ID}`, "installation");

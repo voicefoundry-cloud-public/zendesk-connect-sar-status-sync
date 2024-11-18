@@ -8,7 +8,7 @@ export const validateSourceIP = async (sourceIP) => {
   if (!cachedList) return false; //DDB error
   if (cachedList.includes(sourceIP)) return true;
 
-  const axiosClient = init("");
+  const axiosClient = await init("");
   if (axiosClient) {
     const response = await axiosClient.get(`ips`).catch((err) => {
       console.error("error retrieving IP ranges from Zendesk", err);
