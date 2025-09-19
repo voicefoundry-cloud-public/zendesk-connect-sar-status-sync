@@ -41,7 +41,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['Connect','Agent-status', 'Zendesk']
     HomePageUrl: https://zendeskconnector.ttecdigital.solutions/zendesk/Working-version/enabling-agent-status-sync
-    SemanticVersion: 1.1.5
+    SemanticVersion: 1.1.6
     SourceCodeUrl: https://github.com/voicefoundry-cloud-public/zendesk-connect-sar-status-sync
 
 Resources:
@@ -110,7 +110,7 @@ Resources:
     Properties:
       FunctionName: !Sub "zd-post-agent-association-${TargetEnvironment}"
       Description: "Triggered on linked API endpoint, it stores association between Zendesk agent ID and related Connect agent ID"
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       CodeUri: zd-post-agent-association/
       Timeout: 30
@@ -153,7 +153,7 @@ Resources:
     Properties:
       FunctionName: !Sub "zd-post-status-mapping-${TargetEnvironment}"
       Description: "Triggered on linked API endpoint, it stores mapping between Zendesk agent status ID and configured Connect agent status ID"
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       CodeUri: zd-post-status-mapping/
       Timeout: 30
@@ -197,7 +197,7 @@ Resources:
     Properties:
       FunctionName: !Sub "zd-webhook-set-status-${TargetEnvironment}"
       Description: "Triggered on linked API endpoint, it switches Connect agent status, based on changed Zendesk agent status"
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       CodeUri: zd-webhook-set-status/
       Timeout: 900
@@ -237,7 +237,7 @@ Resources:
     Properties:
       FunctionName: !Sub "zd-update-installation-${TargetEnvironment}"
       Description: "Triggered as a custom resource of deployment stack, it updates Zendesk instance installation settings"
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Handler: index.handler
       CodeUri: zd-update-installation/
       Timeout: 30
