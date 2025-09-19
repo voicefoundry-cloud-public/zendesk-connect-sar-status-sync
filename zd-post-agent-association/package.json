@@ -1,7 +1,7 @@
 {
-  "name": "zendesk-update-installation",
-  "version": "1.0.0",
+  "name": "zendesk-post-agent-association",
+  "version": "1.1.0",
   "dependencies": {
-    "axios": "^0.21.1"
+    "axios": "^1.12.0"
   }
 }
